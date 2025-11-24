@@ -1,8 +1,7 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
-# --- INYECCIÓN CSS: ESTILO PIZARRA (Blackboard) ---
-# Se inyecta CSS para cambiar el fondo y el color de texto en toda la aplicación
-# NOTA: Los estilos de texto globales son ahora menos intrusivos, ya que las tarjetas tienen su propio fondo.
+# --- INYECCIÓN CSS: ESTILO PIZARRA (Blackboard) y Tarjetas de Nota ---
 st.markdown(
     """
     <style>
@@ -16,7 +15,17 @@ st.markdown(
         background-color: #2F4F4F; 
         color: white;
     }
-    /* 3. Color general del texto (afecta elementos fuera de las tarjetas) */
+    /* 3. Estilo de la Tarjeta de Nota (para el contenedor) */
+    .note-card {
+        background-color: #FFFFF0; /* Color de papel claro */
+        color: black; 
+        padding: 20px; 
+        border-radius: 8px; 
+        box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5); /* Sombra para simular elevación */
+        margin-bottom: 25px;
+        border: 1px solid #ccc;
+    }
+    /* 4. Color general del texto (elementos fuera de las tarjetas) */
     * {
         color: white;
     }
@@ -34,7 +43,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 
 # --- Configuración de la Página ---
 st.set_page_config(
@@ -81,7 +89,6 @@ with st.sidebar:
 
 # --- Contenedor del Contenido Principal ---
 st.title("El Blog de la Profe")
-# Cita de Bienvenida con color de tiza
 st.markdown(
     """
     <p style='font-size: 18px; color: #FFFF99;'>
@@ -97,36 +104,39 @@ st.markdown("<hr style='border: 1px solid #FFFF99;'>", unsafe_allow_html=True)
 
 st.subheader("✨ Últimas Publicaciones")
 
-# --- Función Modificada para Tarjetas Estilo Nota ---
-def blog_card(title, category, date, excerpt):
-    # CSS para el contenedor de la tarjeta (simula una nota o papel)
-    note_style = """
-    background-color: #FFFFF0; /* Color de papel o Post-it */
-    color: black; 
-    padding: 20px; 
-    border-radius: 8px; 
-    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5); /* Sombra para simular elevación */
-    margin-bottom: 25px;
-    """
+# --- Función Modificada para Tarjetas Estilo Nota y Presentaciones ---
+def blog_card(title, category, date, excerpt, content_type="article", embed_code=None):
     
-    # Inicia el contenedor HTML para la tarjeta
-    st.markdown(f'<div style="{note_style}">', unsafe_allow_html=True)
-    
-    # Contenido de la tarjeta (todo dentro de la tarjeta debe ser negro)
-    st.markdown(f"**<span style='color: black; font-size: 1.5em;'>{title}</span>**", unsafe_allow_html=True) 
-    st.markdown(f"<span style='color: #4CAF50;'>{category}</span> | <span style='color: #777777;'>{date}</span>", unsafe_allow_html=True)
-    st.markdown(f"<span style='color: black;'>{excerpt}</span>", unsafe_allow_html=True)
-    
-    # Botón de lectura (usamos un truco con markdown/html para el color)
-    st.markdown(
-        f'<p style="text-align: right;"><a href="#" style="color: #007BFF;">Leer el artículo completo >></a></p>', 
-        unsafe_allow_html=True
-    )
-    
-    # Cierra el contenedor HTML
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Creamos un contenedor nativo
+    with st.container():
+        # Asignamos la clase CSS 'note-card' al contenido
+        st.markdown(f'<div class="note-card">', unsafe_allow_html=True)
+        
+        # Título y metadatos (en color negro para el fondo claro)
+        st.markdown(f"**<span style='color: black; font-size: 1.5em;'>{title}</span>**", unsafe_allow_html=True) 
+        st.markdown(f"<span style='color: #4CAF50;'>{category}</span> | <span style='color: #777777;'>{date}</span>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-top: 1px solid #ccc;'>", unsafe_allow_html=True)
+        
+        # Contenido: Artículo o Presentación
+        if content_type == "presentation" and embed_code:
+            st.markdown("### 📽️ Presentación Incrustada", unsafe_allow_html=True)
+            # Usamos st.components.v1.html para incrustar el iframe de la presentación
+            components.html(embed_code, height=400, scrolling=False)
+            st.markdown(f"<span style='color: black;'>{excerpt}</span>", unsafe_allow_html=True)
+        else:
+            # Contenido de artículo normal
+            st.markdown(f"<span style='color: black;'>{excerpt}</span>", unsafe_allow_html=True)
+            st.markdown(
+                f'<p style="text-align: right;"><a href="#" style="color: #007BFF;">Leer el artículo completo >></a></p>', 
+                unsafe_allow_html=True
+            )
+            
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# Tarjeta 1
+
+# --- EJEMPLOS DE USO DE TARJETAS ---
+
+# 1. Tarjeta de Artículo (La que ya tenías)
 blog_card(
     "5 Estrategias para Fomentar el Pensamiento Crítico en Primaria",
     "Didáctica",
@@ -134,15 +144,24 @@ blog_card(
     "Aprende técnicas sencillas y efectivas para que tus alumnos dejen de memorizar y comiencen a cuestionar y analizar la información por sí mismos."
 )
 
-# Tarjeta 2
+# 2. Tarjeta con Presentación Incrustada (¡NUEVO!)
+# NOTA: Debes obtener el código iframe de "Compartir" de Google Slides o SlideShare.
+# Este es un EJEMPLO de código iframe. Reemplázalo por tu presentación real.
+presentacion_ejemplo = """
+<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vT1gB2S5f.../embed?start=false&loop=false&delayms=3000" frameborder="0" width="100%" height="300" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+"""
+
 blog_card(
-    "Mis 3 Apps Favoritas para Crear Quizzes Interactivos",
+    "Tutorial de Gamificación para el Aula",
     "Tecnología Educativa",
-    "15 de Noviembre, 2025",
-    "Descubre herramientas que hacen que la evaluación sea un juego, ahorrándote tiempo de corrección y manteniendo a tus estudiantes motivados."
+    "18 de Noviembre, 2025",
+    "Esta es la presentación que compartí sobre cómo usar elementos de juego en la clase para aumentar la motivación. ¡Espero que te sea útil!",
+    content_type="presentation",
+    embed_code=presentacion_ejemplo
 )
 
-# Tarjeta 3
+
+# 3. Tarjeta de Artículo
 blog_card(
     "Cómo Ayudar a tu Hijo a Organizar su Mochila sin Estresarse",
     "Consejos para Padres",
@@ -158,7 +177,6 @@ with col_email:
     st.text_input("Ingresa tu email para descargar la 'Guía GRATUITA de Gestión del Aula'", label_visibility="collapsed") 
 
 with col_button:
-    # Usamos el botón nativo de Streamlit
     st.button("¡Quiero Mi Guía Ahora!", type="primary", use_container_width=True)
 
 st.markdown("<hr style='border: 1px solid #FFFF99;'>", unsafe_allow_html=True)
