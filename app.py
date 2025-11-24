@@ -2,37 +2,33 @@ import streamlit as st
 
 # --- INYECCIÓN CSS: ESTILO PIZARRA (Blackboard) ---
 # Se inyecta CSS para cambiar el fondo y el color de texto en toda la aplicación
+# NOTA: Los estilos de texto globales son ahora menos intrusivos, ya que las tarjetas tienen su propio fondo.
 st.markdown(
     """
     <style>
     /* 1. Fondo principal de la aplicación: Pizarra */
-    /* Apunta al contenedor principal de la vista de la aplicación */
     [data-testid="stAppViewContainer"] {
         background-color: #36454F; /* Gris oscuro para el efecto pizarra */
         color: white; 
     }
     /* 2. Barra lateral */
     [data-testid="stSidebar"] {
-        background-color: #2F4F4F; /* Un tono más oscuro/verdoso para la sidebar */
+        background-color: #2F4F4F; 
         color: white;
     }
-    /* 3. Color general del texto para simular tiza */
+    /* 3. Color general del texto (afecta elementos fuera de las tarjetas) */
     * {
         color: white;
     }
-    /* Excepciones y colores de énfasis */
+    /* Excepciones: Botones y Inputs */
     .stButton>button {
-        background-color: #556B2F; /* Verde olivo oscuro para los botones */
+        background-color: #556B2F; 
         color: white !important;
         border: 1px solid white;
     }
     .stTextInput>div>div>input {
         background-color: white;
-        color: black !important; /* El texto dentro del input debe ser oscuro */
-    }
-    /* Para el texto de énfasis (cita de bienvenida) */
-    .st-emotion-cache-1f879ad {
-        color: #FFFF99 !important; /* Amarillo claro para tiza */
+        color: black !important;
     }
     </style>
     """,
@@ -49,7 +45,7 @@ st.set_page_config(
 
 # --- Contenedor de la Barra Lateral (Perfil y Menú) ---
 with st.sidebar:
-    # 1. PERFIL DEL PROFESOR (Foto y Nombre en la Esquina)
+    # PERFIL DEL PROFESOR
     st.markdown(
         """
         <div style='text-align: center; margin-bottom: 20px;'>
@@ -63,7 +59,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # 2. Resto del menú
+    # Resto del menú
     st.title("Menú Principal")
     st.button("🏠 Inicio", use_container_width=True)
     st.button("💡 Sobre Mí / Mi Filosofía", use_container_width=True)
@@ -97,17 +93,38 @@ st.markdown(
 
 st.markdown("<hr style='border: 1px solid #FFFF99;'>", unsafe_allow_html=True)
 
-## Sección de Artículos (Simulación de Tarjetas)
+## Sección de Artículos (Simulación de Tarjetas estilo Notas)
 
 st.subheader("✨ Últimas Publicaciones")
 
-# Función para simular una 'tarjeta' de blog
+# --- Función Modificada para Tarjetas Estilo Nota ---
 def blog_card(title, category, date, excerpt):
-    st.markdown(f"### <span style='color: #90EE90;'>{title}</span>", unsafe_allow_html=True) # Verde claro para el título
-    st.markdown(f"**<span style='color: #B0C4DE;'>{category}</span>** | {date}", unsafe_allow_html=True) # Azul acero claro para la categoría
-    st.write(excerpt)
-    st.button(f"Leer el artículo completo >>", key=title)
-    st.markdown("<hr style='border-top: 1px dashed #708090; margin-top: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+    # CSS para el contenedor de la tarjeta (simula una nota o papel)
+    note_style = """
+    background-color: #FFFFF0; /* Color de papel o Post-it */
+    color: black; 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5); /* Sombra para simular elevación */
+    margin-bottom: 25px;
+    """
+    
+    # Inicia el contenedor HTML para la tarjeta
+    st.markdown(f'<div style="{note_style}">', unsafe_allow_html=True)
+    
+    # Contenido de la tarjeta (todo dentro de la tarjeta debe ser negro)
+    st.markdown(f"**<span style='color: black; font-size: 1.5em;'>{title}</span>**", unsafe_allow_html=True) 
+    st.markdown(f"<span style='color: #4CAF50;'>{category}</span> | <span style='color: #777777;'>{date}</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color: black;'>{excerpt}</span>", unsafe_allow_html=True)
+    
+    # Botón de lectura (usamos un truco con markdown/html para el color)
+    st.markdown(
+        f'<p style="text-align: right;"><a href="#" style="color: #007BFF;">Leer el artículo completo >></a></p>', 
+        unsafe_allow_html=True
+    )
+    
+    # Cierra el contenedor HTML
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Tarjeta 1
 blog_card(
@@ -138,10 +155,10 @@ st.subheader("📧 Únete a la Comunidad Educativa")
 col_email, col_button = st.columns([2, 1])
 
 with col_email:
-    # Nota: El placeholder para la foto es una URL genérica (https://via.placeholder.com/150...)
     st.text_input("Ingresa tu email para descargar la 'Guía GRATUITA de Gestión del Aula'", label_visibility="collapsed") 
 
 with col_button:
+    # Usamos el botón nativo de Streamlit
     st.button("¡Quiero Mi Guía Ahora!", type="primary", use_container_width=True)
 
 st.markdown("<hr style='border: 1px solid #FFFF99;'>", unsafe_allow_html=True)
