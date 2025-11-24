@@ -1,59 +1,148 @@
 import streamlit as st
 
+# --- INYECCIÓN CSS: ESTILO PIZARRA (Blackboard) ---
+# Se inyecta CSS para cambiar el fondo y el color de texto en toda la aplicación
+st.markdown(
+    """
+    <style>
+    /* 1. Fondo principal de la aplicación: Pizarra */
+    /* Apunta al contenedor principal de la vista de la aplicación */
+    [data-testid="stAppViewContainer"] {
+        background-color: #36454F; /* Gris oscuro para el efecto pizarra */
+        color: white; 
+    }
+    /* 2. Barra lateral */
+    [data-testid="stSidebar"] {
+        background-color: #2F4F4F; /* Un tono más oscuro/verdoso para la sidebar */
+        color: white;
+    }
+    /* 3. Color general del texto para simular tiza */
+    * {
+        color: white;
+    }
+    /* Excepciones y colores de énfasis */
+    .stButton>button {
+        background-color: #556B2F; /* Verde olivo oscuro para los botones */
+        color: white !important;
+        border: 1px solid white;
+    }
+    .stTextInput>div>div>input {
+        background-color: white;
+        color: black !important; /* El texto dentro del input debe ser oscuro */
+    }
+    /* Para el texto de énfasis (cita de bienvenida) */
+    .st-emotion-cache-1f879ad {
+        color: #FFFF99 !important; /* Amarillo claro para tiza */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 # --- Configuración de la Página ---
 st.set_page_config(
     page_title="El Rincón Educativo de la Profe",
-    page_icon="👩‍🏫",
+    page_icon="📚",
     layout="wide"
 )
 
-# --- Header y Bienvenida ---
-st.header("📚 El Rincón Educativo de la Profe [Nombre]")
-st.markdown("""
-**"Donde las ideas florecen y el aprendizaje nunca se detiene."**
----
-""")
+# --- Contenedor de la Barra Lateral (Perfil y Menú) ---
+with st.sidebar:
+    # 1. PERFIL DEL PROFESOR (Foto y Nombre en la Esquina)
+    st.markdown(
+        """
+        <div style='text-align: center; margin-bottom: 20px;'>
+            <img src="https://via.placeholder.com/150/FFFFFF/000000?text=Profe+Foto" 
+                 style='border-radius: 50%; width: 100px; height: 100px; object-fit: cover; border: 3px solid #FFFF99;'>
+        </div>
+        """, unsafe_allow_html=True
+    )
+    st.markdown("<h2 style='text-align: center; color: white;'>👩‍🏫 Profa. Ana Rodríguez</h2>", unsafe_allow_html=True)
+    st.caption("Especialista en Didáctica y Tecnología Educativa")
+    
+    st.markdown("---")
+    
+    # 2. Resto del menú
+    st.title("Menú Principal")
+    st.button("🏠 Inicio", use_container_width=True)
+    st.button("💡 Sobre Mí / Mi Filosofía", use_container_width=True)
+    st.button("🎁 Recursos Descargables", use_container_width=True)
+    st.button("📧 Contacto", use_container_width=True)
+    
+    st.markdown("---")
+    st.subheader("🏷️ Categorías")
+    st.caption("Filtra por tema")
+    st.write("* Didáctica y Metodología (5)")
+    st.write("* Consejos para Padres (12)")
+    st.write("* Tecnología Educativa (8)")
+    st.write("* Reflexiones y Experiencias (15)")
 
-# --- Contenido Principal (Últimas Publicaciones) ---
-st.title("Últimas Publicaciones 📝")
+    st.markdown("---")
+    st.subheader("📲 Sígueme")
+    st.write("[Instagram] | [Pinterest] | [YouTube]")
 
-# Usamos columnas para simular tarjetas de blog
-col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.subheader("Post 1: Estrategias de Pensamiento Crítico")
-    st.caption("24 de Noviembre, 2025 | Categoría: Didáctica")
-    st.write("Aprende 5 técnicas sencillas para que tus alumnos cuestionen y analicen información.")
-    st.button("Leer más >>", key="p1")
+# --- Contenedor del Contenido Principal ---
+st.title("El Blog de la Profe")
+# Cita de Bienvenida con color de tiza
+st.markdown(
+    """
+    <p style='font-size: 18px; color: #FFFF99;'>
+        "Donde las ideas florecen y el aprendizaje nunca se detiene. 
+        Encuentra inspiración para transformar tu aula o tu hogar."
+    </p>
+    """, unsafe_allow_html=True
+)
 
-with col2:
-    st.subheader("Post 2: Apps para Quizzes Interactivos")
-    st.caption("15 de Noviembre, 2025 | Categoría: Tecnología")
-    st.write("Mis 3 herramientas favoritas para evaluar de forma divertida y rápida.")
-    st.button("Leer más >>", key="p2")
+st.markdown("<hr style='border: 1px solid #FFFF99;'>", unsafe_allow_html=True)
 
-with col3:
-    st.subheader("Post 3: Cómo Ayudar con la Organización")
-    st.caption("1 de Noviembre, 2025 | Categoría: Padres")
-    st.write("Consejos prácticos para que las familias apoyen las rutinas de estudio.")
-    st.button("Leer más >>", key="p3")
+## Sección de Artículos (Simulación de Tarjetas)
 
-st.markdown("---")
+st.subheader("✨ Últimas Publicaciones")
 
-# --- Recursos Destacados (CTA) ---
-st.subheader("🎁 ¡Descarga la Guía GRATUITA para la Gestión del Aula!")
-st.text_input("Ingresa tu email aquí para recibirla:", value="", key="email")
-st.button("¡Quiero Mi Guía!", type="primary")
+# Función para simular una 'tarjeta' de blog
+def blog_card(title, category, date, excerpt):
+    st.markdown(f"### <span style='color: #90EE90;'>{title}</span>", unsafe_allow_html=True) # Verde claro para el título
+    st.markdown(f"**<span style='color: #B0C4DE;'>{category}</span>** | {date}", unsafe_allow_html=True) # Azul acero claro para la categoría
+    st.write(excerpt)
+    st.button(f"Leer el artículo completo >>", key=title)
+    st.markdown("<hr style='border-top: 1px dashed #708090; margin-top: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-# --- Barra Lateral (Simulada) ---
-st.sidebar.title("Menú")
-st.sidebar.button("Inicio")
-st.sidebar.button("Sobre Mí")
-st.sidebar.button("Recursos")
-st.sidebar.button("Contacto")
+# Tarjeta 1
+blog_card(
+    "5 Estrategias para Fomentar el Pensamiento Crítico en Primaria",
+    "Didáctica",
+    "24 de Noviembre, 2025",
+    "Aprende técnicas sencillas y efectivas para que tus alumnos dejen de memorizar y comiencen a cuestionar y analizar la información por sí mismos."
+)
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("Categorías")
-st.sidebar.write("* Didáctica (5)")
-st.sidebar.write("* Consejos para Padres (12)")
-st.sidebar.write("* Tecnología Educativa (8)")
+# Tarjeta 2
+blog_card(
+    "Mis 3 Apps Favoritas para Crear Quizzes Interactivos",
+    "Tecnología Educativa",
+    "15 de Noviembre, 2025",
+    "Descubre herramientas que hacen que la evaluación sea un juego, ahorrándote tiempo de corrección y manteniendo a tus estudiantes motivados."
+)
+
+# Tarjeta 3
+blog_card(
+    "Cómo Ayudar a tu Hijo a Organizar su Mochila sin Estresarse",
+    "Consejos para Padres",
+    "1 de Noviembre, 2025",
+    "Una guía práctica para establecer rutinas de organización en casa. Fomenta la autonomía y reduce el caos matutino de la familia."
+)
+
+# --- Call to Action (CTA) al pie de página ---
+st.subheader("📧 Únete a la Comunidad Educativa")
+col_email, col_button = st.columns([2, 1])
+
+with col_email:
+    # Nota: El placeholder para la foto es una URL genérica (https://via.placeholder.com/150...)
+    st.text_input("Ingresa tu email para descargar la 'Guía GRATUITA de Gestión del Aula'", label_visibility="collapsed") 
+
+with col_button:
+    st.button("¡Quiero Mi Guía Ahora!", type="primary", use_container_width=True)
+
+st.markdown("<hr style='border: 1px solid #FFFF99;'>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #B0C4DE;'>© 2025 El Rincón Educativo de la Profe. Enseñar es dejar una huella para siempre.</div>", unsafe_allow_html=True)
