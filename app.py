@@ -19,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- GESTIÓN DE DATOS (Mantener sin cambios) ---
+# --- GESTIÓN DE DATOS ---
 def load_profile():
     if os.path.exists(PROFILE_FILE):
         with open(PROFILE_FILE, "r") as f: return json.load(f)
@@ -33,13 +33,13 @@ def load_data():
 def save_data(data):
     with open(DATA_FILE, "w") as f: json.dump(data, f, indent=4)
 
-# Inicialización (Mantener sin cambios)
+# Inicialización
 if 'recursos' not in st.session_state: st.session_state['recursos'] = load_data()
 if 'profile' not in st.session_state: st.session_state['profile'] = load_profile()
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'view_file' not in st.session_state: st.session_state['view_file'] = None
 
-# --- ESTILOS VISUALES (MÁXIMA PRIORIDAD PARA OCULTAR BOTÓN) ---
+# --- ESTILOS VISUALES (SOLUCIÓN FINAL DE SUPERPOSICIÓN Y OCULTAMIENTO) ---
 st.markdown(f"""
     <style>
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
@@ -55,37 +55,54 @@ st.markdown(f"""
     .tile-container div {{ color: black; }} /* TEXTO NEGRO FIJO */
     .bg-green {{ background-color: #4CAF50; }} .bg-red {{ background-color: #E53935; }} .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
 
-    /* SUPERPOSICIÓN Y OCULTAMIENTO TOTAL DEL BOTÓN DE STREAMLIT */
-    .stButton {{
-        position: absolute;
+    /* SUPERPOSICIÓN Y OCULTAMIENTO DEL BOTÓN DE STREAMLIT */
+    /* El botón toma el tamaño de la tarjeta y se superpone */
+    .tile-wrapper .stButton {{
+        position: absolute; 
         top: 0;
         left: 0;
-        width: 100%;
+        width: 100%; 
         height: 100%;
         margin: 0 !important;
         padding: 0 !important;
-        z-index: 2; 
+        z-index: 2; /* Siempre encima */
     }}
-    .stButton>button {{
+    /* Oculta el contenido del botón (texto "Abrir") y su espacio */
+    .tile-wrapper .stButton>button {{
         width: 100% !important;
         height: 100% !important;
-        opacity: 0 !important; /* Totalmente transparente */
+        opacity: 0 !important; /* Lo hace completamente transparente */
         cursor: pointer;
-    }}
-    /* OCULTAR EL TEXTO Y EL ESPACIO INNECESARIO */
-    [data-testid^="stBlock"] .stButton:has(button[aria-label="Abrir"]) {{ /* Selector para el botón que es invisible */
-        display: block !important; /* Para que ocupe el espacio correcto */
-        height: 100px !important; 
     }}
     </style>
     """, unsafe_allow_html=True)
 
 # --- VISOR DE PDF (INCRUSTACIÓN) ---
+# Se mantiene la función para mostrar PDF
 def display_pdf(file_path):
+    # Genera un enlace de descarga temporal y usa ese enlace
+    # Esto soluciona los problemas de codificación Base64 en AWS/Chrome
     with open(file_path, "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700px" type="application/pdf"></iframe>'
+        bytes_data = f.read()
+    
+    # Creamos un botón de descarga invisible que solo usaremos para obtener la URL temporal
+    st.download_button(
+        label="Descargar PDF",
+        data=bytes_data,
+        file_name=Path(file_path).name,
+        mime="application/pdf",
+        key="download_temp_pdf_viewer",
+        type="primary"
+    )
+    
+    # Obtenemos el ID de sesión para crear la URL de Streamlit
+    session_id = st.runtime.scriptrunner.get_script_run_ctx().session_id
+    url = f"/~/files/{session_id}/{Path(file_path).name}"
+
+    # Mostramos el PDF usando la URL temporal de Streamlit
+    pdf_display = f'<iframe src="{url}" width="100%" height="700px" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
+
 
 # --- VISTAS DEL PANEL ADMIN (Mantener sin cambios) ---
 def profile_editor():
@@ -151,22 +168,23 @@ def public_view():
 
     for idx, res in enumerate(st.session_state['recursos']):
         with cols[idx]:
-            # Contenedor para manejar la superposición (sin wrapper extra)
+            # Contenedor para manejar la superposición
+            st.markdown('<div class="tile-wrapper">', unsafe_allow_html=True)
             
             # 1. Contenedor visual (la tarjeta)
-            st.markdown(f"""
-            <div class="tile-wrapper">
-                <div class="tile-container {res['color']}">
-                    <div style="font-size: 30px;">{res['icon']}</div>
-                    <div>{res['name']}</div>
-                </div>
+            tile_html = f"""
+            <div class="tile-container {res['color']}">
+                <div style="font-size: 30px;">{res['icon']}</div>
+                <div>{res['name']}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """
+            st.markdown(tile_html, unsafe_allow_html=True)
             
             # 2. Botón invisible de Streamlit para detectar el click
-            # El CSS lo superpone sobre la tarjeta visual
             clicked = st.button("Abrir", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
             
+            st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor wrapper
+
             if clicked:
                 if res.get('link_type') == 'local_pdf':
                     st.session_state['view_file'] = res['link']
