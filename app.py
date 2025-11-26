@@ -132,7 +132,7 @@ def presentation_manager():
             save_data(st.session_state['recursos']); st.warning(f"Botón '{last_res['name']}' y archivo asociado borrados.")
             st.rerun()
 
-# --- VISTA PÚBLICA (ALUMNOS) ---
+# --- VISTA PÚBLICA (ALUMNOS) - MODIFICADA PARA LIMPIEZA DE ESPACIO ---
 def public_view():
     st.markdown("<h1 style='text-align: center; color: #FFFF99;'>🧩 Zona de Aprendizaje</h1>", unsafe_allow_html=True)
     st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:20px;"><input style="padding:10px;border-radius:20px;border:none;width:50%;text-align:center;" placeholder="🔍 Busca aquí..."></div>""", unsafe_allow_html=True)
@@ -140,33 +140,34 @@ def public_view():
     grid_html = '<div class="resource-grid">'
     st.markdown(grid_html, unsafe_allow_html=True) 
 
+    # Usamos st.columns para estructurar el grid y luego superponer el botón invisible
     cols = st.columns(len(st.session_state['recursos']))
 
     for idx, res in enumerate(st.session_state['recursos']):
         with cols[idx]:
-            # Contenedor que agrupa la tarjeta visual y el botón superpuesto
-            with st.container():
-                # 1. Contenedor visual (la tarjeta)
-                tile_html = f"""
+            # 1. Creamos el contenedor clicqueable
+            st.markdown(f"""
+            <div class="clickable-tile">
                 <div class="tile-container {res['color']}">
                     <div style="font-size: 30px;">{res['icon']}</div>
                     <div>{res['name']}</div>
                 </div>
-                """
-                st.markdown(tile_html, unsafe_allow_html=True)
-                
-                # 2. Botón invisible de Streamlit para detectar el click
-                # Nota: El CSS lo superpone y lo hace invisible.
-                clicked = st.button("Abrir", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
-                
-                if clicked:
-                    if res.get('link_type') == 'local_pdf':
-                        st.session_state['view_file'] = res['link']
-                        st.rerun() 
-                    else:
-                        st.error("Recurso no proyectable. Solo se permiten PDFs para proyección.")
-
-
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 2. Botón invisible de Streamlit para detectar el click
+            clicked = st.button("", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
+            
+            if clicked:
+                if res.get('link_type') == 'local_pdf':
+                    st.session_state['view_file'] = res['link']
+                    st.rerun() 
+                else:
+                    # Mensaje de error (no proyectable)
+                    st.error("Recurso no proyectable. Solo se permiten PDFs para proyección.")
+    
+    st.markdown("</div>", unsafe_allow_html=True) # Cierra el contenedor del grid
+# --- FIN public_view ---
 # --- ROUTER PRINCIPAL ---
 # Lógica del Sidebar
 with st.sidebar:
