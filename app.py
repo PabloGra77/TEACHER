@@ -42,12 +42,12 @@ if 'view_file' not in st.session_state: st.session_state['view_file'] = None
 # --- ESTILOS VISUALES (SOLUCIÓN FINAL DE SUPERPOSICIÓN Y OCULTAMIENTO) ---
 st.markdown(f"""
     <style>
+    /* Estilos de fondo y grid */
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
     [data-testid="stSidebar"] {{ background-color: #2F4F4F; color: white; }}
-    /* Grid simplificado */
     .resource-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 20px; justify-items: center; }}
     
-    /* Contenedor principal de la tarjeta (100x100) */
+    /* Contenedor principal para la tarjeta (100x100) */
     .tile-wrapper {{ position: relative; width: 100px; height: 100px; }}
     
     /* Diseño de la Tarjeta Visual */
@@ -58,17 +58,18 @@ st.markdown(f"""
     .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
 
     /* SUPERPOSICIÓN Y OCULTAMIENTO DEL BOTÓN DE STREAMLIT */
-    /* Hacemos el botón invisible y lo forzamos al frente */
+    /* El botón toma el tamaño de la tarjeta y se superpone */
     .tile-wrapper .stButton {{
-        position: absolute;
+        position: absolute; 
         top: 0;
         left: 0;
-        width: 100%;
+        width: 100%; 
         height: 100%;
         margin: 0 !important;
         padding: 0 !important;
         z-index: 2; /* Siempre encima */
     }}
+    /* Oculta el contenido del botón (texto "Abrir") */
     .tile-wrapper .stButton>button {{
         width: 100%;
         height: 100%;
@@ -85,7 +86,7 @@ def display_pdf(file_path):
     pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700px" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
-# --- VISTAS DEL PANEL ADMIN (Mantener sin cambios) ---
+# --- VISTAS DEL PANEL ADMIN ---
 def profile_editor():
     st.header("✏️ Editar Perfil del Profesor(a)")
     st.markdown("---")
@@ -120,7 +121,6 @@ def presentation_manager():
             color = st.selectbox("Color", ["bg-orange","bg-purple","bg-blue"])
             
             if st.form_submit_button("Añadir Botón al Aula"):
-                # Se asume PDF para proyección
                 new_resource = {"name": name, "icon": icon, "color": color, "link_type": 'local_pdf', "link": str(file_path)}
                 st.session_state['recursos'].append(new_resource)
                 save_data(st.session_state['recursos']); st.success("Botón añadido."); st.rerun()
@@ -149,7 +149,7 @@ def public_view():
 
     for idx, res in enumerate(st.session_state['recursos']):
         with cols[idx]:
-            # Contenedor para manejar la superposición (definido en CSS)
+            # Contenedor para manejar la superposición
             st.markdown('<div class="tile-wrapper">', unsafe_allow_html=True)
             
             # 1. Contenedor visual (la tarjeta)
@@ -162,7 +162,7 @@ def public_view():
             st.markdown(tile_html, unsafe_allow_html=True)
             
             # 2. Botón invisible de Streamlit para detectar el click
-            clicked = st.button("Abrir", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
+            clicked = st.button("", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
             
             st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor wrapper
 
