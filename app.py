@@ -11,7 +11,7 @@ DATA_FILE = "recursos.json"
 PROFILE_FILE = "profile.json"
 UPLOAD_DIR = "uploaded_files" 
 
-Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True) # Asegurar que la carpeta exista
+Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True) 
 
 st.set_page_config(
     page_title="Aula Virtual",
@@ -46,7 +46,7 @@ st.markdown(f"""
     .resource-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 20px; justify-items: center; }}
     .tile {{ display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100px; height: 100px; border-radius: 15px; text-decoration: none; font-weight: bold; font-size: 12px; text-align: center; transition: transform 0.2s; box-shadow: 3px 3px 10px rgba(0,0,0,0.4); }}
     .tile:hover {{ transform: scale(1.1); box-shadow: 0px 0px 15px yellow; z-index: 10; }}
-    .tile div {{ color: black; }} /* <--- ¡TEXTO NEGRO FIJO! */
+    .tile div {{ color: black; }} /* TEXTO NEGRO FIJO */
     .bg-green {{ background-color: #4CAF50; }} .bg-red {{ background-color: #E53935; }}
     .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
     </style>
@@ -95,7 +95,6 @@ def presentation_manager():
             color = st.selectbox("Color", ["bg-orange","bg-purple","bg-blue"])
             
             if st.form_submit_button("Añadir Botón al Aula"):
-                # link_type: 'local_pdf' para proyección, 'local_download' para descarga
                 link_type = 'local_pdf' if file_ext == '.pdf' else 'local_download'
                 
                 new_resource = {"name": name, "icon": icon, "color": color, "link_type": link_type, "link": str(file_path)}
@@ -105,18 +104,10 @@ def presentation_manager():
 
     st.markdown("---")
     st.subheader("🧹 Gestionar Botones Existentes")
-    
-    recursos_revertidos = st.session_state['recursos'][::-1]
-    
     if st.session_state['recursos']:
-        st.write("Últimos botones subidos:")
-        for idx, res in enumerate(recursos_revertidos[:5]):
-            st.write(f"- {res['name']} ({res['link_type']})")
-        
         if st.button("Borrar ÚLTIMO botón añadido"):
             last_res = st.session_state['recursos'].pop()
             if last_res.get('link_type') in ['local_pdf', 'local_download']:
-                # Intenta borrar el archivo físico asociado si existe
                 try: Path(last_res['link']).unlink()
                 except FileNotFoundError: pass
                 
@@ -124,15 +115,12 @@ def presentation_manager():
             st.warning(f"Botón '{last_res['name']}' y archivo asociado borrados.")
             st.rerun()
 
-
 # --- VISTA PÚBLICA (ALUMNOS) ---
 def public_view():
     st.markdown("<h1 style='text-align: center; color: #FFFF99;'>🧩 Zona de Aprendizaje</h1>", unsafe_allow_html=True)
     st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:20px;"><input style="padding:10px;border-radius:20px;border:none;width:50%;text-align:center;" placeholder="🔍 Busca aquí..."></div>""", unsafe_allow_html=True)
 
     grid_html = '<div class="resource-grid">'
-    
-    # ⚠️ Renderiza los botones como formularios para que sean clickeables
     for idx, res in enumerate(st.session_state['recursos']):
         form_key = f"tile_form_{idx}"
         with st.form(form_key, clear_on_submit=False):
@@ -143,12 +131,11 @@ def public_view():
             </a>
             """
             st.markdown(tile_html, unsafe_allow_html=True)
-            # El botón oculto es lo que captura el click del formulario
+            
             if st.form_submit_button("Abrir", help="Abrir recurso", use_container_width=True):
                 if res.get('link_type') == 'local_pdf':
                     st.session_state['view_file'] = res['link']
                 elif res.get('link_type') == 'local_download':
-                    # Para PPTX, forzamos descarga con un componente temporal
                     st.download_button(
                         label="Descargar", 
                         data=Path(res['link']).read_bytes(), 
@@ -157,19 +144,39 @@ def public_view():
                         key=f"dl_{form_key}"
                     )
                     st.info("Archivo listo para descargar. Clic en el botón azul de descarga.")
-                else: # Enlaces externos (aunque los eliminamos, queda el soporte)
-                    st.error("Los enlaces externos están deshabilitados. Usa botones de archivo.")
             
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# --- LÓGICA PRINCIPAL (ROUTER) ---
+# --- ROUTER PRINCIPAL ---
+
+# Lógica del Sidebar (Restaurada)
+with st.sidebar:
+    st.image(st.session_state['profile']['photo_url'], width=100)
+    st.markdown(f"### {st.session_state['profile']['name']}")
+    st.markdown(f"**Materia:** {st.session_state['profile']['subject']}")
+    st.markdown("---") # Separador para el login
+
+    if not st.session_state['logged_in']:
+        # Restaurar la sección de Login para que se vea
+        with st.expander("🔑 Ingreso Docente"):
+            u = st.text_input("Usuario", key='login_user'); p = st.text_input("Contraseña", type="password", key='login_pass')
+            if st.button("Entrar", key='login_btn'):
+                if u == ADMIN_USER and p == ADMIN_PASS:
+                    st.session_state['logged_in'] = True; st.rerun()
+                else:
+                    st.error("Credenciales incorrectas.")
+    else:
+        # Si está logueado, mostrar el botón de salir
+        if st.button("Cerrar Sesión"): st.session_state['logged_in'] = False; st.rerun()
+
+# Lógica de Vistas (Router)
 if st.session_state['logged_in']:
     tab1, tab2 = st.tabs(["📝 Perfil", "🖼️ Presentaciones"])
     with tab1: profile_editor()
     with tab2: presentation_manager()
 else:
-    # 1. VISOR DE PDF SI ESTÁ ACTIVO
+    # Si no está logueado, verifica si debe mostrar el visor de PDF
     if st.session_state.get('view_file'):
         file_path = Path(st.session_state['view_file'])
         if file_path.exists():
@@ -179,10 +186,9 @@ else:
                 st.session_state['view_file'] = None
                 st.rerun()
         else:
-            st.error("El archivo no existe. Por favor, contacte al administrador.")
-            st.session_state['view_file'] = None # Resetear el visor si el archivo se borró
+            st.error("Archivo no encontrado.")
+            st.session_state['view_file'] = None 
             public_view()
-            
-    # 2. VISTA DE AULA NORMAL
     else:
+        # Muestra la vista pública normal con los botones
         public_view()
