@@ -39,10 +39,9 @@ if 'profile' not in st.session_state: st.session_state['profile'] = load_profile
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'view_file' not in st.session_state: st.session_state['view_file'] = None
 
-# --- ESTILOS VISUALES (SOLUCIÓN FINAL DE SUPERPOSICIÓN Y OCULTAMIENTO) ---
+# --- ESTILOS VISUALES (MÁXIMA PRIORIDAD PARA OCULTAR BOTÓN) ---
 st.markdown(f"""
     <style>
-    /* Estilos de fondo y grid */
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
     [data-testid="stSidebar"] {{ background-color: #2F4F4F; color: white; }}
     .resource-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 20px; justify-items: center; }}
@@ -54,27 +53,29 @@ st.markdown(f"""
     .tile-container {{ width: 100%; height: 100%; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 12px; transition: transform 0.2s; box-shadow: 3px 3px 10px rgba(0,0,0,0.4); cursor: pointer; position: relative; z-index: 1; }}
     .tile-container:hover {{ transform: scale(1.05); box-shadow: 0px 0px 15px yellow; }}
     .tile-container div {{ color: black; }} /* TEXTO NEGRO FIJO */
-    .bg-green {{ background-color: #4CAF50; }} .bg-red {{ background-color: #E53935; }}
-    .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
+    .bg-green {{ background-color: #4CAF50; }} .bg-red {{ background-color: #E53935; }} .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
 
-    /* SUPERPOSICIÓN Y OCULTAMIENTO DEL BOTÓN DE STREAMLIT */
-    /* El botón toma el tamaño de la tarjeta y se superpone */
-    .tile-wrapper .stButton {{
-        position: absolute; 
+    /* SUPERPOSICIÓN Y OCULTAMIENTO TOTAL DEL BOTÓN DE STREAMLIT */
+    .stButton {{
+        position: absolute;
         top: 0;
         left: 0;
-        width: 100%; 
+        width: 100%;
         height: 100%;
         margin: 0 !important;
         padding: 0 !important;
-        z-index: 2; /* Siempre encima */
+        z-index: 2; 
     }}
-    /* Oculta el contenido del botón (texto "Abrir") */
-    .tile-wrapper .stButton>button {{
-        width: 100%;
-        height: 100%;
-        opacity: 0 !important; /* Lo hace completamente transparente */
+    .stButton>button {{
+        width: 100% !important;
+        height: 100% !important;
+        opacity: 0 !important; /* Totalmente transparente */
         cursor: pointer;
+    }}
+    /* OCULTAR EL TEXTO Y EL ESPACIO INNECESARIO */
+    [data-testid^="stBlock"] .stButton:has(button[aria-label="Abrir"]) {{ /* Selector para el botón que es invisible */
+        display: block !important; /* Para que ocupe el espacio correcto */
+        height: 100px !important; 
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -86,7 +87,7 @@ def display_pdf(file_path):
     pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700px" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
-# --- VISTAS DEL PANEL ADMIN ---
+# --- VISTAS DEL PANEL ADMIN (Mantener sin cambios) ---
 def profile_editor():
     st.header("✏️ Editar Perfil del Profesor(a)")
     st.markdown("---")
@@ -121,6 +122,7 @@ def presentation_manager():
             color = st.selectbox("Color", ["bg-orange","bg-purple","bg-blue"])
             
             if st.form_submit_button("Añadir Botón al Aula"):
+                # Se asume PDF para proyección
                 new_resource = {"name": name, "icon": icon, "color": color, "link_type": 'local_pdf', "link": str(file_path)}
                 st.session_state['recursos'].append(new_resource)
                 save_data(st.session_state['recursos']); st.success("Botón añadido."); st.rerun()
@@ -149,23 +151,22 @@ def public_view():
 
     for idx, res in enumerate(st.session_state['recursos']):
         with cols[idx]:
-            # Contenedor para manejar la superposición
-            st.markdown('<div class="tile-wrapper">', unsafe_allow_html=True)
+            # Contenedor para manejar la superposición (sin wrapper extra)
             
             # 1. Contenedor visual (la tarjeta)
-            tile_html = f"""
-            <div class="tile-container {res['color']}">
-                <div style="font-size: 30px;">{res['icon']}</div>
-                <div>{res['name']}</div>
+            st.markdown(f"""
+            <div class="tile-wrapper">
+                <div class="tile-container {res['color']}">
+                    <div style="font-size: 30px;">{res['icon']}</div>
+                    <div>{res['name']}</div>
+                </div>
             </div>
-            """
-            st.markdown(tile_html, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
             
             # 2. Botón invisible de Streamlit para detectar el click
-            clicked = st.button("", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
+            # El CSS lo superpone sobre la tarjeta visual
+            clicked = st.button("Abrir", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
             
-            st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor wrapper
-
             if clicked:
                 if res.get('link_type') == 'local_pdf':
                     st.session_state['view_file'] = res['link']
