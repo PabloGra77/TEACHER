@@ -39,7 +39,7 @@ if 'profile' not in st.session_state: st.session_state['profile'] = load_profile
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'view_file' not in st.session_state: st.session_state['view_file'] = None
 
-# --- ESTILOS VISUALES ---
+# --- ESTILOS VISUALES (SOLUCIÓN PARA OCULTAR BOTÓN) ---
 st.markdown(f"""
     <style>
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
@@ -51,9 +51,19 @@ st.markdown(f"""
     .tile-container div {{ color: black; }} /* TEXTO NEGRO FIJO */
     .bg-green {{ background-color: #4CAF50; }} .bg-red {{ background-color: #E53935; }}
     .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
-    /* ESTILO PARA EL BOTÓN INVISIBLE */
-    .stButton>button {{ visibility: hidden; height: 0; }} 
-    .stButton {{ margin-top: -100px; }}
+
+    /* OCULTAR EL BOTÓN QUE CAPTURA EL CLICK Y SU ESPACIO */
+    /* Apunta al botón de Streamlit */
+    .stButton>button {{ 
+        visibility: hidden !important; 
+        height: 0px !important; 
+        width: 0px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }}
+    /* Coloca la tarjeta HTML detrás del botón invisible para capturar el click */
+    .stButton {{ margin-top: -100px; height: 100px !important; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -128,7 +138,7 @@ def public_view():
 
     for idx, res in enumerate(st.session_state['recursos']):
         with cols[idx]:
-            # Creamos el contenedor de la tarjeta visual
+            # 1. Contenedor visual (la tarjeta)
             tile_html = f"""
             <div class="tile-container {res['color']}">
                 <div style="font-size: 30px;">{res['icon']}</div>
@@ -137,7 +147,7 @@ def public_view():
             """
             st.markdown(tile_html, unsafe_allow_html=True)
             
-            # Botón invisible de Streamlit para detectar el click
+            # 2. Botón invisible de Streamlit para detectar el click
             clicked = st.button("Abrir", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
             
             if clicked:
