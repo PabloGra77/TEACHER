@@ -19,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- GESTIÓN DE DATOS ---
+# --- GESTIÓN DE DATOS (No Tocar) ---
 def load_profile():
     if os.path.exists(PROFILE_FILE):
         with open(PROFILE_FILE, "r") as f: return json.load(f)
@@ -37,8 +37,9 @@ def save_data(data):
 if 'recursos' not in st.session_state: st.session_state['recursos'] = load_data()
 if 'profile' not in st.session_state: st.session_state['profile'] = load_profile()
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
+if 'view_file' not in st.session_state: st.session_state['view_file'] = None # Nuevo estado para el visor
 
-# --- ESTILOS VISUALES (TEXTO DE TARJETAS NEGRO) ---
+# --- ESTILOS VISUALES (TEXTO NEGRO) ---
 st.markdown(f"""
     <style>
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
@@ -59,7 +60,8 @@ def display_pdf(file_path):
     pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700px" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
-# --- VISTAS DEL PANEL ADMIN ---
+# --- VISTAS DEL PANEL ADMIN (Perfiles y Presentaciones) ---
+# ... (profile_editor and presentation_manager functions remain the same as the previous correct code) ...
 def profile_editor():
     st.header("✏️ Editar Perfil del Profesor(a)")
     st.markdown("---")
@@ -85,7 +87,7 @@ def presentation_manager():
         file_path = Path(UPLOAD_DIR) / file_name
         
         with open(file_path, "wb") as f: f.write(uploaded_file.getbuffer())
-        st.success(f"Archivo '{uploaded_file.name}' guardado.")
+        st.success(f"Archivo '{uploaded_file.name}' guardado en el servidor.")
         
         with st.form("add_file_res"):
             st.subheader("Añadir como Botón")
@@ -114,6 +116,7 @@ def presentation_manager():
             save_data(st.session_state['recursos'])
             st.warning(f"Botón '{last_res['name']}' y archivo asociado borrados.")
             st.rerun()
+# --- FIN VISTAS ADMIN ---
 
 # --- VISTA PÚBLICA (ALUMNOS) ---
 def public_view():
@@ -122,43 +125,43 @@ def public_view():
 
     grid_html = '<div class="resource-grid">'
     for idx, res in enumerate(st.session_state['recursos']):
-        form_key = f"tile_form_{idx}"
-        with st.form(form_key, clear_on_submit=False):
-            tile_html = f"""
-            <a href='javascript:void(0);' class="tile {res['color']}">
-                <div style="font-size: 30px;">{res['icon']}</div>
-                <div>{res['name']}</div>
-            </a>
-            """
-            st.markdown(tile_html, unsafe_allow_html=True)
+        # Determinar el enlace
+        final_link = res['link']
+        
+        if res.get('link_type') == 'local_pdf':
+            # Si es PDF, usamos un truco para que el botón redireccione a la misma URL con un parámetro
+            final_link = f"?view_file={res['link']}"
+            target_attr = '_self'
+        elif res.get('link_type') == 'local_download':
+            # Si es PPTX, el navegador abrirá el archivo directamente (para descarga o visualización)
+            final_link = f"/{res['link']}"
+            target_attr = '_blank'
+        else:
+            # Enlaces externos
+            target_attr = '_blank'
             
-            if st.form_submit_button("Abrir", help="Abrir recurso", use_container_width=True):
-                if res.get('link_type') == 'local_pdf':
-                    st.session_state['view_file'] = res['link']
-                elif res.get('link_type') == 'local_download':
-                    st.download_button(
-                        label="Descargar", 
-                        data=Path(res['link']).read_bytes(), 
-                        file_name=Path(res['link']).name,
-                        mime="application/octet-stream",
-                        key=f"dl_{form_key}"
-                    )
-                    st.info("Archivo listo para descargar. Clic en el botón azul de descarga.")
-            
-    st.markdown("</div>", unsafe_allow_html=True)
+        tile = f"""
+        <a href="{final_link}" class="tile {res['color']}" target="{target_attr}">
+            <div style="font-size: 30px;">{res['icon']}</div>
+            <div>{res['name']}</div>
+        </a>
+        """
+        grid_html += tile
+    grid_html += '</div>'
+    
+    st.markdown(grid_html, unsafe_allow_html=True)
 
 
 # --- ROUTER PRINCIPAL ---
 
-# Lógica del Sidebar (Restaurada)
+# Lógica del Sidebar
 with st.sidebar:
     st.image(st.session_state['profile']['photo_url'], width=100)
     st.markdown(f"### {st.session_state['profile']['name']}")
     st.markdown(f"**Materia:** {st.session_state['profile']['subject']}")
-    st.markdown("---") # Separador para el login
+    st.markdown("---") 
 
     if not st.session_state['logged_in']:
-        # Restaurar la sección de Login para que se vea
         with st.expander("🔑 Ingreso Docente"):
             u = st.text_input("Usuario", key='login_user'); p = st.text_input("Contraseña", type="password", key='login_pass')
             if st.button("Entrar", key='login_btn'):
@@ -167,7 +170,6 @@ with st.sidebar:
                 else:
                     st.error("Credenciales incorrectas.")
     else:
-        # Si está logueado, mostrar el botón de salir
         if st.button("Cerrar Sesión"): st.session_state['logged_in'] = False; st.rerun()
 
 # Lógica de Vistas (Router)
@@ -176,18 +178,19 @@ if st.session_state['logged_in']:
     with tab1: profile_editor()
     with tab2: presentation_manager()
 else:
-    # Si no está logueado, verifica si debe mostrar el visor de PDF
-    if st.session_state.get('view_file'):
-        file_path = Path(st.session_state['view_file'])
-        if file_path.exists():
+    # Si no está logueado, verifica si hay un parámetro 'view_file' en la URL
+    query_params = st.query_params
+    
+    if 'view_file' in query_params:
+        file_path = Path(query_params['view_file'])
+        if file_path.exists() and file_path.suffix.lower() == '.pdf':
             st.header(f"Proyectando: {file_path.name}")
             display_pdf(file_path)
             if st.button("Volver al Aula"):
-                st.session_state['view_file'] = None
+                st.query_params.clear() # Limpia el parámetro de la URL
                 st.rerun()
         else:
-            st.error("Archivo no encontrado.")
-            st.session_state['view_file'] = None 
+            st.error("Archivo no encontrado o no es un PDF.")
             public_view()
     else:
         # Muestra la vista pública normal con los botones
