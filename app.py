@@ -110,7 +110,7 @@ def presentation_manager():
                 except FileNotFoundError: pass
             save_data(st.session_state['recursos']); st.warning(f"Borrado."); st.rerun()
 
-# --- VISTA PÚBLICA (ALUMNOS) ---
+# --- VISTA PÚBLICA (ALUMNOS) - MODIFICADA PARA MANEJO DE CLIC ---
 def public_view():
     st.markdown("<h1 style='text-align: center; color: #FFFF99;'>🧩 Zona de Aprendizaje</h1>", unsafe_allow_html=True)
     st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:20px;"><input style="padding:10px;border-radius:20px;border:none;width:50%;text-align:center;" placeholder="🔍 Busca aquí..."></div>""", unsafe_allow_html=True)
@@ -118,39 +118,48 @@ def public_view():
     grid_html = '<div class="resource-grid">'
     st.markdown(grid_html, unsafe_allow_html=True) # Abre el contenedor del grid
 
+    cols = st.columns(len(st.session_state['recursos'])) # Creamos las columnas necesarias
+
     for idx, res in enumerate(st.session_state['recursos']):
-        col = st.columns([1])[0] # Usamos una sola columna para crear un contenedor por tarjeta
-        with col:
-            # Creamos un formulario con el mismo look and feel de la tarjeta
-            with st.form(f"tile_form_{idx}", clear_on_submit=False):
-                # HTML para el diseño visual de la tarjeta
-                tile_html = f"""
-                <div class="tile-container {res['color']}">
-                    <div style="font-size: 30px;">{res['icon']}</div>
-                    <div>{res['name']}</div>
-                </div>
-                """
-                st.markdown(tile_html, unsafe_allow_html=True)
-                
-                # El botón es invisible y es lo que captura el click del usuario
-                clicked = st.form_submit_button("Abrir", help=f"Abrir {res['name']}", key=f"btn_{idx}")
-                
-                if clicked:
-                    if res.get('link_type') == 'local_pdf':
-                        st.session_state['view_file'] = res['link']
-                        st.rerun() # Dispara el router para que muestre el PDF
-                    elif res.get('link_type') == 'local_download':
-                        # Botón de descarga para PPTX
-                        st.download_button(
-                            label=f"Descargar {res['name']}", 
-                            data=Path(res['link']).read_bytes(), 
-                            file_name=Path(res['link']).name,
-                            mime="application/octet-stream",
-                            key=f"dl_{idx}"
-                        )
-                        st.info("Archivo listo para descargar. El botón de descarga apareció en la parte superior.")
+        with cols[idx]:
+            # 1. Creamos el diseño visual de la tarjeta
+            tile_html = f"""
+            <div id="tile_{idx}" class="tile-container {res['color']}" onclick="window.parent.postMessage({{'source': 'streamlit', 'data': {{'widget_id': 'btn_tile_{idx}'}}}}, '*');">
+                <div style="font-size: 30px;">{res['icon']}</div>
+                <div>{res['name']}</div>
+            </div>
+            """
+            st.markdown(tile_html, unsafe_allow_html=True)
+            
+            # 2. Creamos un botón invisible que Streamlit SÍ reconocerá como evento
+            clicked = st.button("Abrir", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
+            
+            # 3. Corregir el posicionamiento del botón para que esté encima de la tarjeta visual
+            st.markdown(f"""
+            <style>
+                #root .stButton {{ margin-top: -100px; }}
+            </style>
+            """, unsafe_allow_html=True)
 
 
+            if clicked:
+                if res.get('link_type') == 'local_pdf':
+                    st.session_state['view_file'] = res['link']
+                    st.rerun() # Dispara el router para que muestre el PDF
+                elif res.get('link_type') == 'local_download':
+                    # Para PPTX, forzamos descarga con el componente de descarga nativo
+                    st.download_button(
+                        label=f"Descargar {res['name']} 💾", 
+                        data=Path(res['link']).read_bytes(), 
+                        file_name=Path(res['link']).name,
+                        mime="application/octet-stream",
+                        key=f"dl_{idx}"
+                    )
+                    # NOTA: El botón de descarga aparece en la parte superior. 
+                    st.warning("El archivo está listo. Clic en el botón de descarga azul que aparece en el sidebar.")
+
+    st.markdown("</div>", unsafe_allow_html=True) # Cierra el contenedor del grid
+# --- FIN DE public_view ---
 # --- ROUTER PRINCIPAL ---
 # ... (El router y el sidebar se mantienen sin cambios ya que son correctos) ...
 
