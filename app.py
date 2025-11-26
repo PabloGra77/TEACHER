@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import base64 
 
-# --- CONFIGURACIÓN Y ARCHIVOS (Mantener sin cambios) ---
+# --- CONFIGURACIÓN Y ARCHIVOS ---
 ADMIN_USER = "admin"      
 ADMIN_PASS = "clave123"   
 DATA_FILE = "recursos.json"
@@ -39,36 +39,40 @@ if 'profile' not in st.session_state: st.session_state['profile'] = load_profile
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'view_file' not in st.session_state: st.session_state['view_file'] = None
 
-# --- ESTILOS VISUALES (SOLUCIÓN FINAL DE SUPERPOSICIÓN) ---
+# --- ESTILOS VISUALES (SOLUCIÓN FINAL DE SUPERPOSICIÓN Y OCULTAMIENTO) ---
 st.markdown(f"""
     <style>
-    /* Estilos de fondo y grid (Mantener sin cambios) */
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
     [data-testid="stSidebar"] {{ background-color: #2F4F4F; color: white; }}
+    /* Grid simplificado */
     .resource-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 20px; justify-items: center; }}
     
-    /* Diseño de la Tarjeta */
+    /* Contenedor principal de la tarjeta (100x100) */
+    .tile-wrapper {{ position: relative; width: 100px; height: 100px; }}
+    
+    /* Diseño de la Tarjeta Visual */
     .tile-container {{ width: 100%; height: 100%; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 12px; transition: transform 0.2s; box-shadow: 3px 3px 10px rgba(0,0,0,0.4); cursor: pointer; position: relative; z-index: 1; }}
     .tile-container:hover {{ transform: scale(1.05); box-shadow: 0px 0px 15px yellow; }}
     .tile-container div {{ color: black; }} /* TEXTO NEGRO FIJO */
     .bg-green {{ background-color: #4CAF50; }} .bg-red {{ background-color: #E53935; }}
     .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
 
-    /* OCULTAR Y SUPERPONER EL BOTÓN DE STREAMLIT */
-    .stButton {{ 
-        position: absolute; /* Permite superponer */
+    /* SUPERPOSICIÓN Y OCULTAMIENTO DEL BOTÓN DE STREAMLIT */
+    /* Hacemos el botón invisible y lo forzamos al frente */
+    .tile-wrapper .stButton {{
+        position: absolute;
         top: 0;
         left: 0;
-        width: 100px; /* Tamaño de la tarjeta */
-        height: 100px;
-        margin: 0 !important;
-        padding: 0 !important;
-        z-index: 2; /* Siempre encima de la tarjeta */
-    }}
-    .stButton>button {{
         width: 100%;
         height: 100%;
-        opacity: 0; /* Hace el botón transparente */
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 2; /* Siempre encima */
+    }}
+    .tile-wrapper .stButton>button {{
+        width: 100%;
+        height: 100%;
+        opacity: 0 !important; /* Lo hace completamente transparente */
         cursor: pointer;
     }}
     </style>
@@ -145,10 +149,10 @@ def public_view():
 
     for idx, res in enumerate(st.session_state['recursos']):
         with cols[idx]:
-            # 1. Creamos un contenedor relativo para el botón superpuesto
-            st.markdown('<div class="clickable-tile">', unsafe_allow_html=True)
+            # Contenedor para manejar la superposición (definido en CSS)
+            st.markdown('<div class="tile-wrapper">', unsafe_allow_html=True)
             
-            # 2. Contenedor visual (la tarjeta)
+            # 1. Contenedor visual (la tarjeta)
             tile_html = f"""
             <div class="tile-container {res['color']}">
                 <div style="font-size: 30px;">{res['icon']}</div>
@@ -157,10 +161,10 @@ def public_view():
             """
             st.markdown(tile_html, unsafe_allow_html=True)
             
-            # 3. Botón invisible de Streamlit (oculto por CSS)
-            clicked = st.button("", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
+            # 2. Botón invisible de Streamlit para detectar el click
+            clicked = st.button("Abrir", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
             
-            st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor relativo
+            st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor wrapper
 
             if clicked:
                 if res.get('link_type') == 'local_pdf':
@@ -170,7 +174,7 @@ def public_view():
                     st.error("Recurso no proyectable. Solo se permiten PDFs para proyección.")
 
 
-# --- ROUTER PRINCIPAL (Mantener sin cambios) ---
+# --- ROUTER PRINCIPAL ---
 # Lógica del Sidebar
 with st.sidebar:
     st.image(st.session_state['profile']['photo_url'], width=100)
