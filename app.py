@@ -1,166 +1,105 @@
 import streamlit as st
-import streamlit.components.v1 as components
+import json
+import os
 
-# --- INYECCIÓN CSS: ESTILO PIZARRA Y GRID TIPO SYMBALOO ---
-st.markdown(
-    """
+# --- 1. CONFIGURACIÓN GENERAL (CAMBIA ESTO) ---
+# Aquí defines tu usuario y contraseña para entrar al panel
+ADMIN_USER = "admin"      # <--- Cambia "admin" por tu usuario
+ADMIN_PASS = "clave123"   # <--- Cambia "clave123" por tu contraseña
+DATA_FILE = "recursos.json"
+
+# Configuración de la pestaña del navegador (lo que se ve arriba en Chrome)
+st.set_page_config(
+    page_title="Aula Virtual 2.0",  # <--- Cambia el nombre de la pestaña
+    page_icon="🎓",                 # <--- Cambia el icono (emoji)
+    layout="wide"
+)
+
+# --- FUNCIONES DE MEMORIA (NO TOCAR) ---
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    return [
+        {"name": "Google", "icon": "🔍", "color": "bg-blue", "link": "https://google.com"},
+        {"name": "Juegos", "icon": "🎮", "color": "bg-green", "link": "#"}
+    ]
+
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f)
+
+if 'recursos' not in st.session_state:
+    st.session_state['recursos'] = load_data()
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+
+# --- ESTILOS CSS (NO TOCAR - DA EL COLOR Y FORMA) ---
+st.markdown("""
     <style>
-    /* 1. Fondo Pizarra */
-    [data-testid="stAppViewContainer"] {
-        background-color: #36454F;
-        color: white; 
-    }
-    [data-testid="stSidebar"] {
-        background-color: #2F4F4F; 
-        color: white;
-    }
-    
-    /* 2. Estilo para la BARRA DE BÚSQUEDA CENTRAL */
-    .search-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 30px;
-    }
-    .search-box {
-        width: 60%;
-        padding: 15px;
-        border-radius: 30px;
-        border: none;
-        outline: none;
-        text-align: center;
-        font-size: 18px;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
-    }
-
-    /* 3. Estilo para el GRID DE RECURSOS (Tipo Symbaloo) */
-    .resource-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: 15px;
-        padding: 20px;
-        justify-items: center;
-    }
-    
-    .tile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        width: 100px;
-        height: 100px;
-        border-radius: 15px;
-        text-decoration: none;
-        color: white;
-        font-weight: bold;
-        font-size: 12px;
-        text-align: center;
-        transition: transform 0.2s;
-        box-shadow: 3px 3px 10px rgba(0,0,0,0.4);
-        padding: 5px;
-    }
-    
-    .tile:hover {
-        transform: scale(1.1);
-        z-index: 10;
-        box-shadow: 0px 0px 15px yellow; /* Resplandor al pasar el mouse */
-    }
-
-    .tile img {
-        width: 50px;
-        height: 50px;
-        margin-bottom: 5px;
-        filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
-    }
-    
-    /* Colores de las baldosas */
-    .bg-green { background-color: #4CAF50; }
-    .bg-red { background-color: #E53935; }
-    .bg-blue { background-color: #2196F3; }
-    .bg-orange { background-color: #FF9800; }
-    .bg-purple { background-color: #9C27B0; }
-    
+    [data-testid="stAppViewContainer"] { background-color: #36454F; color: white; }
+    [data-testid="stSidebar"] { background-color: #2F4F4F; color: white; }
+    .resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 20px; justify-items: center; }
+    .tile { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100px; height: 100px; border-radius: 15px; text-decoration: none; color: white; font-weight: bold; font-size: 12px; text-align: center; transition: transform 0.2s; box-shadow: 3px 3px 10px rgba(0,0,0,0.4); }
+    .tile:hover { transform: scale(1.1); box-shadow: 0px 0px 15px yellow; z-index: 10; }
+    .bg-green { background-color: #4CAF50; } .bg-red { background-color: #E53935; }
+    .bg-blue { background-color: #2196F3; } .bg-orange { background-color: #FF9800; } .bg-purple { background-color: #9C27B0; }
     </style>
-    """,
-    unsafe_allow_html=True
-)
+    """, unsafe_allow_html=True)
 
-# --- Configuración de la Página ---
-st.set_page_config(page_title="Aula Virtual Interactiva", page_icon="🧩", layout="wide")
-
-# --- Barra Lateral (Perfil) ---
-with st.sidebar:
-    st.markdown(
-        """
-        <div style='text-align: center;'>
-            <img src="https://via.placeholder.com/150/FFFFFF/000000?text=Profe" 
-                 style='border-radius: 50%; width: 90px; border: 3px solid #FFFF99;'>
-            <h3>Profa. Ana</h3>
-        </div>
-        """, unsafe_allow_html=True
-    )
-    st.write("---")
-    st.button("🏠 Inicio / Tablero", use_container_width=True)
-    st.button("📝 Blog de Notas", use_container_width=True)
-    st.button("📺 Videos", use_container_width=True)
-
-# --- TÍTULO PRINCIPAL ---
-st.markdown("<h1 style='text-align: center; color: #FFFF99;'>🧩 Zona de Aprendizaje</h1>", unsafe_allow_html=True)
-
-# --- BARRA DE BÚSQUEDA (Visual) ---
-st.markdown(
-    """
-    <div class="search-container">
-        <input type="text" class="search-box" placeholder="🔍 ¿Qué quieres aprender hoy? (Ej: Vocales, Cuentos...)">
-    </div>
-    """, unsafe_allow_html=True
-)
-
-# --- GENERACIÓN DEL GRID TIPO SYMBALOO ---
-# Definimos los recursos como una lista de diccionarios para facilitar la edición
-resources = [
-    {"name": "Praxias", "icon": "👅", "color": "bg-green", "link": "#"},
-    {"name": "Caperucita", "icon": "🐺", "color": "bg-red", "link": "#"},
-    {"name": "Sílabas", "icon": "🗣️", "color": "bg-blue", "link": "#"},
-    {"name": "Cuentos", "icon": "📖", "color": "bg-purple", "link": "#"},
-    {"name": "Colores", "icon": "🎨", "color": "bg-orange", "link": "#"},
-    {"name": "Trabalenguas", "icon": "🤪", "color": "bg-green", "link": "#"},
-    {"name": "Fonemas", "icon": "🔊", "color": "bg-blue", "link": "#"},
-    {"name": "Granja", "icon": "🐮", "color": "bg-orange", "link": "#"},
-    {"name": "Adivinanzas", "icon": "❓", "color": "bg-purple", "link": "#"},
-    {"name": "Letra L", "icon": "L", "color": "bg-green", "link": "#"},
-    {"name": "Letra R", "icon": "R", "color": "bg-green", "link": "#"},
-    {"name": "Juegos", "icon": "🎲", "color": "bg-red", "link": "#"},
-]
-
-# Creamos el HTML para el Grid
-grid_html = '<div class="resource-grid">'
-for res in resources:
-    # Usamos emojis como iconos por simplicidad, pero podrías usar URLs de imágenes reales
-    # Si el icono es un emoji, lo mostramos grande. Si es texto (L/R), también.
+# --- VISTA PÚBLICA (LO QUE VEN LOS ALUMNOS) ---
+def public_view():
+    # 2. CAMBIA ESTO: El Título Grande Principal
+    st.markdown("<h1 style='text-align: center; color: #FFFF99;'>🎓 Aula de Matemáticas</h1>", unsafe_allow_html=True) # <--- Cambia el título aquí
     
-    tile = f"""
-    <a href="{res['link']}" class="tile {res['color']}" target="_blank">
-        <div style="font-size: 40px;">{res['icon']}</div>
-        <div class="label">{res['name']}</div>
-    </a>
-    """
-    grid_html += tile
-grid_html += '</div>'
+    # 3. CAMBIA ESTO: El texto dentro de la barra de búsqueda
+    st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:20px;"><input style="padding:10px;border-radius:20px;border:none;width:50%;text-align:center;" placeholder="🔍 Busca tu tarea o juego aquí..."></div>""", unsafe_allow_html=True)
 
-# Renderizamos el Grid
-st.markdown(grid_html, unsafe_allow_html=True)
+    grid_html = '<div class="resource-grid">'
+    for res in st.session_state['recursos']:
+        tile = f"""<a href="{res['link']}" class="tile {res['color']}" target="_blank"><div style="font-size: 30px;">{res['icon']}</div><div>{res['name']}</div></a>"""
+        grid_html += tile
+    grid_html += '</div>'
+    
+    st.markdown(grid_html, unsafe_allow_html=True)
 
-st.write("---")
+# --- VISTA PRIVADA (LO QUE VES TÚ) ---
+def admin_view():
+    st.title("Panel de Control 🎛️")
+    st.info("Modo Edición Activado")
+    with st.form("add_res"):
+        c1, c2 = st.columns(2)
+        name = c1.text_input("Nombre del botón")
+        link = c2.text_input("Enlace (URL)")
+        icon = c1.text_input("Icono (Emoji)", value="🔗")
+        color = c2.selectbox("Color", ["bg-green","bg-red","bg-blue","bg-orange","bg-purple"])
+        if st.form_submit_button("Guardar"):
+            if name and link:
+                st.session_state['recursos'].append({"name": name, "icon": icon, "color": color, "link": link})
+                save_data(st.session_state['recursos'])
+                st.success("Guardado!"); st.rerun()
 
-# --- SECCIÓN INFERIOR (BLOG RÁPIDO) ---
-st.subheader("📌 Notas de Clase")
-col1, col2 = st.columns(2)
+    if st.button("Borrar último"):
+        if st.session_state['recursos']:
+            st.session_state['recursos'].pop()
+            save_data(st.session_state['recursos'])
+            st.warning("Borrado."); st.rerun()
 
-with col1:
-    with st.container():
-        st.info("📢 **Tarea para mañana:** Traer el cuaderno de caligrafía y repasar los sonidos de la R.")
+# --- BARRA LATERAL (FOTO Y NOMBRE PROFESOR) ---
+with st.sidebar:
+    # Puedes cambiar la URL de la imagen por una foto tuya si tienes el link
+    st.image("https://cdn-icons-png.flaticon.com/512/3429/3429149.png", width=100)
+    
+    # 4. CAMBIA ESTO: Tu Nombre en la barra lateral
+    st.markdown("### Profesor Juan Pérez") # <--- Pon tu nombre real aquí
+    
+    if not st.session_state['logged_in']:
+        with st.expander("Ingreso Docente"):
+            u = st.text_input("Usuario"); p = st.text_input("Contraseña", type="password")
+            if st.button("Entrar") and u == ADMIN_USER and p == ADMIN_PASS:
+                st.session_state['logged_in'] = True; st.rerun()
+    else:
+        if st.button("Salir"): st.session_state['logged_in'] = False; st.rerun()
 
-with col2:
-     # Ejemplo de presentación incrustada pequeña
-    st.markdown("**📽️ Repaso de la semana:**")
-    st.video("https://www.youtube.com/watch?v=dQw4w9WgXcQ") # Video ejemplo
+if st.session_state['logged_in']: admin_view()
+else: public_view()
