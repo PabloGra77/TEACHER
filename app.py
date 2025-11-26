@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import base64 
 
-# --- CONFIGURACIÓN Y ARCHIVOS ---
+# --- CONFIGURACIÓN Y ARCHIVOS (Mantener sin cambios) ---
 ADMIN_USER = "admin"      
 ADMIN_PASS = "clave123"   
 DATA_FILE = "recursos.json"
@@ -19,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- GESTIÓN DE DATOS ---
+# --- GESTIÓN DE DATOS (Mantener sin cambios) ---
 def load_profile():
     if os.path.exists(PROFILE_FILE):
         with open(PROFILE_FILE, "r") as f: return json.load(f)
@@ -33,7 +33,7 @@ def load_data():
 def save_data(data):
     with open(DATA_FILE, "w") as f: json.dump(data, f, indent=4)
 
-# Inicialización
+# Inicialización (Mantener sin cambios)
 if 'recursos' not in st.session_state: st.session_state['recursos'] = load_data()
 if 'profile' not in st.session_state: st.session_state['profile'] = load_profile()
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
@@ -42,10 +42,12 @@ if 'view_file' not in st.session_state: st.session_state['view_file'] = None
 # --- ESTILOS VISUALES (SOLUCIÓN FINAL DE SUPERPOSICIÓN) ---
 st.markdown(f"""
     <style>
+    /* Estilos de fondo y grid (Mantener sin cambios) */
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
     [data-testid="stSidebar"] {{ background-color: #2F4F4F; color: white; }}
     .resource-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 20px; justify-items: center; }}
-    /* CONTENEDOR DE LA TARJETA VISUAL */
+    
+    /* Diseño de la Tarjeta */
     .tile-container {{ width: 100%; height: 100%; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 12px; transition: transform 0.2s; box-shadow: 3px 3px 10px rgba(0,0,0,0.4); cursor: pointer; position: relative; z-index: 1; }}
     .tile-container:hover {{ transform: scale(1.05); box-shadow: 0px 0px 15px yellow; }}
     .tile-container div {{ color: black; }} /* TEXTO NEGRO FIJO */
@@ -53,21 +55,21 @@ st.markdown(f"""
     .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
 
     /* OCULTAR Y SUPERPONER EL BOTÓN DE STREAMLIT */
-    .clickable-tile {{ position: relative; width: 100px; height: 100px; }}
-    .clickable-tile .stButton {{
-        position: absolute;
+    .stButton {{ 
+        position: absolute; /* Permite superponer */
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
+        width: 100px; /* Tamaño de la tarjeta */
+        height: 100px;
         margin: 0 !important;
         padding: 0 !important;
-        z-index: 2; /* Sobre la tarjeta */
+        z-index: 2; /* Siempre encima de la tarjeta */
     }}
-    .clickable-tile .stButton>button {{
+    .stButton>button {{
         width: 100%;
         height: 100%;
-        opacity: 0; /* Lo hace invisible */
+        opacity: 0; /* Hace el botón transparente */
+        cursor: pointer;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -79,9 +81,7 @@ def display_pdf(file_path):
     pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700px" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
-# --- VISTAS DEL PANEL ADMIN ---
-# (Las funciones de administración y la lógica del sidebar se mantienen sin cambios)
-
+# --- VISTAS DEL PANEL ADMIN (Mantener sin cambios) ---
 def profile_editor():
     st.header("✏️ Editar Perfil del Profesor(a)")
     st.markdown("---")
@@ -116,6 +116,7 @@ def presentation_manager():
             color = st.selectbox("Color", ["bg-orange","bg-purple","bg-blue"])
             
             if st.form_submit_button("Añadir Botón al Aula"):
+                # Se asume PDF para proyección
                 new_resource = {"name": name, "icon": icon, "color": color, "link_type": 'local_pdf', "link": str(file_path)}
                 st.session_state['recursos'].append(new_resource)
                 save_data(st.session_state['recursos']); st.success("Botón añadido."); st.rerun()
@@ -132,7 +133,7 @@ def presentation_manager():
             save_data(st.session_state['recursos']); st.warning(f"Botón '{last_res['name']}' y archivo asociado borrados.")
             st.rerun()
 
-# --- VISTA PÚBLICA (ALUMNOS) - MODIFICADA PARA LIMPIEZA DE ESPACIO ---
+# --- VISTA PÚBLICA (ALUMNOS) ---
 def public_view():
     st.markdown("<h1 style='text-align: center; color: #FFFF99;'>🧩 Zona de Aprendizaje</h1>", unsafe_allow_html=True)
     st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:20px;"><input style="padding:10px;border-radius:20px;border:none;width:50%;text-align:center;" placeholder="🔍 Busca aquí..."></div>""", unsafe_allow_html=True)
@@ -140,35 +141,36 @@ def public_view():
     grid_html = '<div class="resource-grid">'
     st.markdown(grid_html, unsafe_allow_html=True) 
 
-    # Usamos st.columns para estructurar el grid y luego superponer el botón invisible
     cols = st.columns(len(st.session_state['recursos']))
 
     for idx, res in enumerate(st.session_state['recursos']):
         with cols[idx]:
-            # 1. Creamos el contenedor clicqueable
-            st.markdown(f"""
-            <div class="clickable-tile">
-                <div class="tile-container {res['color']}">
-                    <div style="font-size: 30px;">{res['icon']}</div>
-                    <div>{res['name']}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            # 1. Creamos un contenedor relativo para el botón superpuesto
+            st.markdown('<div class="clickable-tile">', unsafe_allow_html=True)
             
-            # 2. Botón invisible de Streamlit para detectar el click
+            # 2. Contenedor visual (la tarjeta)
+            tile_html = f"""
+            <div class="tile-container {res['color']}">
+                <div style="font-size: 30px;">{res['icon']}</div>
+                <div>{res['name']}</div>
+            </div>
+            """
+            st.markdown(tile_html, unsafe_allow_html=True)
+            
+            # 3. Botón invisible de Streamlit (oculto por CSS)
             clicked = st.button("", key=f"btn_tile_{idx}", help=f"Abrir {res['name']}", use_container_width=True)
             
+            st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor relativo
+
             if clicked:
                 if res.get('link_type') == 'local_pdf':
                     st.session_state['view_file'] = res['link']
                     st.rerun() 
                 else:
-                    # Mensaje de error (no proyectable)
                     st.error("Recurso no proyectable. Solo se permiten PDFs para proyección.")
-    
-    st.markdown("</div>", unsafe_allow_html=True) # Cierra el contenedor del grid
-# --- FIN public_view ---
-# --- ROUTER PRINCIPAL ---
+
+
+# --- ROUTER PRINCIPAL (Mantener sin cambios) ---
 # Lógica del Sidebar
 with st.sidebar:
     st.image(st.session_state['profile']['photo_url'], width=100)
