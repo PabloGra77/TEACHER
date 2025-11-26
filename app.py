@@ -39,24 +39,20 @@ if 'profile' not in st.session_state: st.session_state['profile'] = load_profile
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'view_file' not in st.session_state: st.session_state['view_file'] = None
 
-# --- ESTILOS VISUALES (SOLUCIÓN FINAL DE SUPERPOSICIÓN Y OCULTAMIENTO) ---
+# --- ESTILOS VISUALES (Mantenemos ocultamiento) ---
 st.markdown(f"""
     <style>
     [data-testid="stAppViewContainer"] {{ background-color: #36454F; color: white; }}
     [data-testid="stSidebar"] {{ background-color: #2F4F4F; color: white; }}
     .resource-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding: 20px; justify-items: center; }}
     
-    /* Contenedor principal para la tarjeta (100x100) */
     .tile-wrapper {{ position: relative; width: 100px; height: 100px; }}
-    
-    /* Diseño de la Tarjeta Visual */
     .tile-container {{ width: 100%; height: 100%; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 12px; transition: transform 0.2s; box-shadow: 3px 3px 10px rgba(0,0,0,0.4); cursor: pointer; position: relative; z-index: 1; }}
     .tile-container:hover {{ transform: scale(1.05); box-shadow: 0px 0px 15px yellow; }}
-    .tile-container div {{ color: black; }} /* TEXTO NEGRO FIJO */
+    .tile-container div {{ color: black; }} 
     .bg-green {{ background-color: #4CAF50; }} .bg-red {{ background-color: #E53935; }} .bg-blue {{ background-color: #2196F3; }} .bg-orange {{ background-color: #FF9800; }} .bg-purple {{ background-color: #9C27B0; }}
 
-    /* SUPERPOSICIÓN Y OCULTAMIENTO DEL BOTÓN DE STREAMLIT */
-    /* El botón toma el tamaño de la tarjeta y se superpone */
+    /* OCULTAMIENTO TOTAL DEL BOTÓN Y ESPACIO */
     .tile-wrapper .stButton {{
         position: absolute; 
         top: 0;
@@ -65,46 +61,21 @@ st.markdown(f"""
         height: 100%;
         margin: 0 !important;
         padding: 0 !important;
-        z-index: 2; /* Siempre encima */
+        z-index: 2; 
     }}
-    /* Oculta el contenido del botón (texto "Abrir") y su espacio */
     .tile-wrapper .stButton>button {{
         width: 100% !important;
         height: 100% !important;
-        opacity: 0 !important; /* Lo hace completamente transparente */
+        opacity: 0 !important; 
         cursor: pointer;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- VISOR DE PDF (INCRUSTACIÓN) ---
-# Se mantiene la función para mostrar PDF
-def display_pdf(file_path):
-    # Genera un enlace de descarga temporal y usa ese enlace
-    # Esto soluciona los problemas de codificación Base64 en AWS/Chrome
-    with open(file_path, "rb") as f:
-        bytes_data = f.read()
-    
-    # Creamos un botón de descarga invisible que solo usaremos para obtener la URL temporal
-    st.download_button(
-        label="Descargar PDF",
-        data=bytes_data,
-        file_name=Path(file_path).name,
-        mime="application/pdf",
-        key="download_temp_pdf_viewer",
-        type="primary"
-    )
-    
-    # Obtenemos el ID de sesión para crear la URL de Streamlit
-    session_id = st.runtime.scriptrunner.get_script_run_ctx().session_id
-    url = f"/~/files/{session_id}/{Path(file_path).name}"
+# --- VISOR DE PDF (ELIMINADO Y REEMPLAZADO POR DESCARGA) ---
+# Se elimina la función display_pdf ya que no funciona de forma estable.
 
-    # Mostramos el PDF usando la URL temporal de Streamlit
-    pdf_display = f'<iframe src="{url}" width="100%" height="700px" type="application/pdf"></iframe>'
-    st.markdown(pdf_display, unsafe_allow_html=True)
-
-
-# --- VISTAS DEL PANEL ADMIN (Mantener sin cambios) ---
+# --- VISTAS DEL PANEL ADMIN (Sin cambios) ---
 def profile_editor():
     st.header("✏️ Editar Perfil del Profesor(a)")
     st.markdown("---")
@@ -119,7 +90,7 @@ def profile_editor():
 
 def presentation_manager():
     st.header("🖼️ Subir Presentaciones PDF")
-    st.info("Sube solo archivos **PDF** para que se puedan proyectar directamente en la página.")
+    st.info("Sube archivos PDF. **El archivo se descargará directamente** para que pueda ser proyectado en el dispositivo del usuario.")
     
     uploaded_file = st.file_uploader("Archivo (SOLO PDF):", type=['pdf'])
     
@@ -135,12 +106,12 @@ def presentation_manager():
             st.subheader("Añadir como Botón")
             c1, c2 = st.columns(2)
             name = c1.text_input("Título de la Tarjeta", value=Path(uploaded_file.name).stem)
-            icon = c2.text_input("Icono", value="🎥")
+            icon = c2.text_input("Icono", value="💾")
             color = st.selectbox("Color", ["bg-orange","bg-purple","bg-blue"])
             
             if st.form_submit_button("Añadir Botón al Aula"):
-                # Se asume PDF para proyección
-                new_resource = {"name": name, "icon": icon, "color": color, "link_type": 'local_pdf', "link": str(file_path)}
+                # Ahora link_type 'local_download' para todos los archivos subidos
+                new_resource = {"name": name, "icon": icon, "color": color, "link_type": 'local_download', "link": str(file_path)}
                 st.session_state['recursos'].append(new_resource)
                 save_data(st.session_state['recursos']); st.success("Botón añadido."); st.rerun()
 
@@ -149,7 +120,7 @@ def presentation_manager():
     if st.session_state['recursos']:
         if st.button("Borrar ÚLTIMO botón añadido"):
             last_res = st.session_state['recursos'].pop()
-            if last_res.get('link_type') == 'local_pdf':
+            if last_res.get('link_type') == 'local_download':
                 try: Path(last_res['link']).unlink()
                 except FileNotFoundError: pass
                 
@@ -159,7 +130,7 @@ def presentation_manager():
 # --- VISTA PÚBLICA (ALUMNOS) ---
 def public_view():
     st.markdown("<h1 style='text-align: center; color: #FFFF99;'>🧩 Zona de Aprendizaje</h1>", unsafe_allow_html=True)
-    st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:20px;"><input style="padding:10px;border-radius:20px;border:none;width:50%;text-align:center;" placeholder="🔍 Busca aquí..."></div>""", unsafe_allow_html=True)
+    st.markdown("""<div style="display:flex;justify-content:center;margin-bottom:20px;"><input style="padding:10px;border-radius:20px;border-none;width:50%;text-align:center;" placeholder="🔍 Busca aquí..."></div>""", unsafe_allow_html=True)
 
     grid_html = '<div class="resource-grid">'
     st.markdown(grid_html, unsafe_allow_html=True) 
@@ -186,14 +157,24 @@ def public_view():
             st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor wrapper
 
             if clicked:
-                if res.get('link_type') == 'local_pdf':
-                    st.session_state['view_file'] = res['link']
-                    st.rerun() 
+                if res.get('link_type') == 'local_download':
+                    # Lee el archivo y lo sirve para descarga
+                    file_path = Path(res['link'])
+                    if file_path.exists():
+                        st.download_button(
+                            label=f"Descargar {res['name']} 💾", 
+                            data=file_path.read_bytes(), 
+                            file_name=file_path.name,
+                            mime="application/octet-stream",
+                            key=f"dl_final_{idx}"
+                        )
+                        st.info("La descarga comenzará automáticamente.")
+                    else:
+                        st.error("El archivo no existe en el servidor. Contacte al administrador.")
                 else:
-                    st.error("Recurso no proyectable. Solo se permiten PDFs para proyección.")
+                    st.error("Recurso no proyectable. El archivo se debe descargar.")
 
-
-# --- ROUTER PRINCIPAL ---
+# --- ROUTER PRINCIPAL (Sin cambios) ---
 # Lógica del Sidebar
 with st.sidebar:
     st.image(st.session_state['profile']['photo_url'], width=100)
@@ -218,18 +199,5 @@ if st.session_state['logged_in']:
     with tab1: profile_editor()
     with tab2: presentation_manager()
 else:
-    # Si no está logueado, verifica si debe mostrar el visor de PDF
-    if st.session_state.get('view_file'):
-        file_path = Path(st.session_state['view_file'])
-        if file_path.exists() and file_path.suffix.lower() == '.pdf':
-            st.header(f"Proyectando: {file_path.name}")
-            display_pdf(file_path)
-            if st.button("Volver al Aula"):
-                st.session_state['view_file'] = None
-                st.rerun()
-        else:
-            st.error("El archivo no existe o no es un PDF válido.")
-            st.session_state['view_file'] = None 
-            public_view()
-    else:
-        public_view()
+    # Mostramos solo la vista pública. El visor fue eliminado por inestabilidad.
+    public_view()
